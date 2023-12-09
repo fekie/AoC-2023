@@ -114,7 +114,7 @@ fn main() {
             }
         };
 
-        //println!("Line {line} has a calibration value of {calibration_value}");
+        println!("Line {line} has a calibration value of {calibration_value}");
 
         accumulator += calibration_value;
     }
