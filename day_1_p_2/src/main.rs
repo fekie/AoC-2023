@@ -72,9 +72,7 @@ fn find_word_digits(line: &str) -> HashMap<usize, u32> {
 }
 
 fn concat_digits(first_digit: u32, last_digit: u32) -> u32 {
-    (first_digit.to_string() + &last_digit.to_string())
-        .parse()
-        .unwrap()
+    (first_digit * 10) + last_digit
 }
 
 /// Finds the standard digits and word digits in a line.
@@ -103,18 +101,10 @@ fn main() {
         let mut digit_indices = digits.keys().copied().collect::<Vec<usize>>();
         digit_indices.sort();
 
-        let calibration_value = match digit_indices.len() {
-            0 => continue,
-            1 => digits[digit_indices.first().unwrap()],
-            _ => {
-                let first_digit = digits[digit_indices.first().unwrap()];
-                let last_digit = digits[digit_indices.last().unwrap()];
+        let first_digit = digits[digit_indices.first().unwrap()];
+        let last_digit = digits[digit_indices.last().unwrap()];
 
-                concat_digits(first_digit, last_digit)
-            }
-        };
-
-        println!("Line {line} has a calibration value of {calibration_value}");
+        let calibration_value = concat_digits(first_digit, last_digit);
 
         accumulator += calibration_value;
     }
