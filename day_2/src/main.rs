@@ -62,8 +62,13 @@ impl Set {
 struct Game(Vec<Set>);
 
 impl Game {
-    fn new(raw: &str) -> Self {
-        Self(raw.split("; ").map(Set::new).collect())
+    fn new(line: &str) -> Self {
+        // We truncate the "Game n:" part. We have to do it by finding the colon
+        // first as n can be 1-3 digits.
+        let colon_location = line.find(':').unwrap();
+        let truncated_line = &line[colon_location + 2..];
+
+        Self(truncated_line.split("; ").map(Set::new).collect())
     }
 }
 
@@ -76,14 +81,7 @@ fn main() {
 
     let sum_of_ids = INPUT
         .lines()
-        .map(|line| {
-            // We truncate the "Game n:" part. We have to do it by finding the colon
-            // first as n can be 1-3 digits.
-            let colon_location = line.find(':').unwrap();
-            let truncated_line = &line[colon_location + 2..];
-
-            Game::new(truncated_line)
-        })
+        .map(Game::new)
         .enumerate()
         .filter_map(|(i, game)| match bag.is_valid(&game) {
             true => {
