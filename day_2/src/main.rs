@@ -83,12 +83,13 @@ fn main() {
         .lines()
         .map(Game::new)
         .enumerate()
-        .filter_map(|(i, game)| match bag.is_valid(&game) {
-            true => {
-                let game_id = i as u32 + 1;
-                Some(game_id)
+        .filter_map(|(i, game)| {
+            let game_id = i as u32 + 1;
+
+            match bag.is_valid(&game) {
+                true => Some(game_id),
+                false => None,
             }
-            false => None,
         })
         .sum::<u32>();
 
