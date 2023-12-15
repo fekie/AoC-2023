@@ -8,6 +8,32 @@ struct Bag {
 }
 
 impl Bag {
+    fn generate_smallest_bag(game: &Game) -> Self {
+        let mut highest_red = 0;
+        let mut highest_green = 0;
+        let mut highest_blue = 0;
+
+        for set in &game.0 {
+            if set.red > highest_red {
+                highest_red = set.red;
+            }
+
+            if set.green > highest_green {
+                highest_green = set.green;
+            }
+
+            if set.blue > highest_blue {
+                highest_blue = set.blue;
+            }
+        }
+
+        Self {
+            red: highest_red,
+            green: highest_green,
+            blue: highest_blue,
+        }
+    }
+
     fn is_valid(&self, game: &Game) -> bool {
         let valid_sets = game
             .0
@@ -73,6 +99,7 @@ impl Game {
 }
 
 fn main() {
+    // Part 1
     let bag = Bag {
         red: 12,
         green: 13,
@@ -94,4 +121,17 @@ fn main() {
         .sum::<u32>();
 
     println!("Sum of IDs: {sum_of_ids}");
+
+    // Part 2
+    let power_sum = INPUT
+        .lines()
+        .map(Game::new)
+        .map(|game| {
+            let smallest_bag = Bag::generate_smallest_bag(&game);
+
+            smallest_bag.red * smallest_bag.green * smallest_bag.blue
+        })
+        .sum::<u32>();
+
+    println!("Sum of powers of bags: {power_sum}");
 }
