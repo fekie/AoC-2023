@@ -40,6 +40,8 @@ impl EngineSchematic {
                     _ => continue,
                 }
 
+                // dbg!(unit);
+                //dbg!(x, y);
                 let ship = self.build_out_ship(x, y);
 
                 // We skip the next parts of the body.
@@ -65,13 +67,18 @@ impl EngineSchematic {
 
         // We have to go ahead and add the original unit.
         if let Some(unit) = self.get_unit(x, y) {
+            //dbg!(unit);
+            //dbg!(x, y);
             trailing_digits_with_locations.push(((x, y), unit));
         }
 
         loop {
             // If we find a trailing digit, we add it to the ship
             match self.get_unit_right(x, y) {
-                Some(unit) => trailing_digits_with_locations.push(((x, y), unit)),
+                Some(unit) => match unit {
+                    Unit::Digit(foo) => trailing_digits_with_locations.push(((x, y), unit)),
+                    _ => break,
+                },
                 None => break,
             }
 
@@ -83,13 +90,30 @@ impl EngineSchematic {
         // adjacent to the body of the ship, and keep them if they aren't `None`.
         let border_units = trailing_digits_with_locations
             .iter()
-            .flat_map(|((x, y), unit)| {
-                vec![
-                    self.get_unit_left(*x, *y),
-                    self.get_unit_right(*x, *y),
-                    self.get_unit_down(*x, *y),
-                    self.get_unit_up(*x, *y),
-                ]
+            .enumerate()
+            .flat_map(|(i, ((x, y), _))| {
+                let mut border_units = Vec::new();
+
+                // If this is the first unit, we want to include the left unit
+                // into the border.
+                if i == 0 {
+                    border_units.push(self.get_unit_left(*x, *y));
+                }
+
+                // If this is the last unit, we want to include the right unit.
+                if i == trailing_digits_with_locations.len() {
+                    border_units.push(self.get_unit_right(*x, *y))
+                }
+
+                // For all units, even on the ends, we want to include
+                // the higher and lower ones.
+                border_units.push(self.get_unit_up(*x, *y));
+                border_units.push(self.get_unit_down(*x, *y));
+
+                dbg!(x, y);
+                dbg!(&border_units);
+
+                border_units
             })
             .filter_map(|unit_opt| unit_opt)
             .collect();
@@ -99,6 +123,8 @@ impl EngineSchematic {
             .map(|(_, unit)| *unit)
             .collect();
 
+        // dbg!(&body_units);
+
         Ship {
             body: body_units,
             borders: border_units,
@@ -106,7 +132,7 @@ impl EngineSchematic {
     }
 
     fn get_unit(&self, x: usize, y: usize) -> Option<Unit> {
-        self.0.get(x, y).cloned()
+        self.0.get(y, x).cloned()
     }
 
     fn get_unit_left(&self, x: usize, y: usize) -> Option<Unit> {
@@ -114,7 +140,7 @@ impl EngineSchematic {
             return None;
         }
 
-        self.0.get(x - 1, y).cloned()
+        self.0.get(y, x - 1).cloned()
     }
 
     fn get_unit_up(&self, x: usize, y: usize) -> Option<Unit> {
@@ -122,7 +148,7 @@ impl EngineSchematic {
             return None;
         }
 
-        self.0.get(x, y - 1).cloned()
+        self.0.get(y - 1, x).cloned()
     }
 
     fn get_unit_right(&self, x: usize, y: usize) -> Option<Unit> {
@@ -132,7 +158,7 @@ impl EngineSchematic {
             return None;
         }
 
-        self.0.get(x + 1, y).cloned()
+        self.0.get(y, x + 1).cloned()
     }
 
     fn get_unit_down(&self, x: usize, y: usize) -> Option<Unit> {
@@ -142,7 +168,7 @@ impl EngineSchematic {
             return None;
         }
 
-        self.0.get(x, y + 1).cloned()
+        self.0.get(y + 1, x).cloned()
     }
 }
 
