@@ -228,6 +228,8 @@ impl EngineSchematic {
     }
 }
 
+/// This is sort of a wrapper over [`Unit`] that allows us to store the position of
+/// the unit as well.
 #[derive(Debug, Clone, Copy)]
 struct UnitWithCoords {
     x: usize,
