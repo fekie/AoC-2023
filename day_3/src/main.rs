@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use grid::Grid;
 
 const INPUT: &str = include_str!("../input.txt");
@@ -9,8 +7,8 @@ const INPUT: &str = include_str!("../input.txt");
 /// me of Battleship.
 #[derive(Debug)]
 struct Ship {
-    body: Vec<Unit>,
-    borders: Vec<Unit>,
+    body: Vec<UnitWithCoords>,
+    borders: Vec<UnitWithCoords>,
 }
 
 /// A type wrapper over a [`Grid`]. Our (0,0) on the grid is the top left corner,
@@ -66,64 +64,71 @@ impl EngineSchematic {
         let mut trailing_digits_with_locations = Vec::new();
 
         // We have to go ahead and add the original unit.
-        if let Some(unit) = self.get_unit(x, y) {
-            //dbg!(unit);
-            //dbg!(x, y);
-            trailing_digits_with_locations.push(((x, y), unit));
+        if let Some(unit_with_coords) = self.get_unit_with_coords(x, y) {
+            trailing_digits_with_locations.push(unit_with_coords);
         }
 
-        loop {
-            // If we find a trailing digit, we add it to the ship
-            match self.get_unit_right(x, y) {
-                Some(unit) => match unit {
-                    Unit::Digit(foo) => trailing_digits_with_locations.push(((x, y), unit)),
-                    _ => break,
-                },
-                None => break,
+        while let Some(unit_with_coords) = self.get_unit_with_coords_right(x, y) {
+            match unit_with_coords.unit {
+                Unit::Digit(_) => trailing_digits_with_locations.push(unit_with_coords),
+                _ => break,
             }
 
-            // After this, we increment x by 1.
-            x += 1;
+            x += 1
         }
 
-        // Now, we add the border of the ship. Basically, we scan the units
-        // adjacent to the body of the ship, and keep them if they aren't `None`.
-        let border_units = trailing_digits_with_locations
+        // We grab the coords of the body in (x, y) tuples.
+        let body_coords = trailing_digits_with_locations
             .iter()
-            .enumerate()
-            .flat_map(|(i, ((x, y), _))| {
-                let mut border_units = Vec::new();
+            .map(|unit_with_coords| (unit_with_coords.x, unit_with_coords.y))
+            .collect::<Vec<(usize, usize)>>();
 
-                // If this is the first unit, we want to include the left unit
-                // into the border.
-                if i == 0 {
-                    border_units.push(self.get_unit_left(*x, *y));
-                }
+        // We grab the left and right edges of the body
+        let horizontal_edges_coords = [
+            self.get_unit_with_coords_left(
+                body_coords.first().unwrap().0,
+                body_coords.first().unwrap().1,
+            ),
+            self.get_unit_with_coords_right(
+                body_coords.last().unwrap().0,
+                body_coords.last().unwrap().1,
+            ),
+        ]
+        .iter()
+        .flatten()
+        .map(|unit_with_coords| (unit_with_coords.x, unit_with_coords.y))
+        .collect::<Vec<(usize, usize)>>();
 
-                // If this is the last unit, we want to include the right unit.
-                if i == trailing_digits_with_locations.len() {
-                    border_units.push(self.get_unit_right(*x, *y))
-                }
+        let mut border_units_options = Vec::new();
 
-                // For all units, even on the ends, we want to include
-                // the higher and lower ones.
-                border_units.push(self.get_unit_up(*x, *y));
-                border_units.push(self.get_unit_down(*x, *y));
+        // Before we combine the coords we collected above, we need to
+        // add the edges to the borders.
+        border_units_options.extend(
+            horizontal_edges_coords
+                .iter()
+                .map(|(x, y)| self.get_unit_with_coords(*x, *y)),
+        );
 
-                dbg!(x, y);
-                dbg!(&border_units);
+        // Now we want to combine the coords vectors, and add everything above and below to
+        // the border_units vector
+        let all_middle_row_coords = {
+            let mut middle_row_coords = Vec::new();
+            middle_row_coords.extend(body_coords);
+            middle_row_coords.extend(horizontal_edges_coords);
+            middle_row_coords
+        };
 
-                border_units
-            })
-            .filter_map(|unit_opt| unit_opt)
-            .collect();
+        border_units_options.extend(all_middle_row_coords.iter().flat_map(|(x, y)| {
+            vec![
+                self.get_unit_with_coords_up(*x, *y),
+                self.get_unit_with_coords_down(*x, *y),
+            ]
+        }));
 
-        let body_units = trailing_digits_with_locations
-            .iter()
-            .map(|(_, unit)| *unit)
-            .collect();
+        let border_units = border_units_options.into_iter().flatten().collect();
 
-        // dbg!(&body_units);
+        // We used `.to_vec()` here because it clones it? the compiler told me to.
+        let body_units = trailing_digits_with_locations.to_vec();
 
         Ship {
             body: body_units,
@@ -131,44 +136,82 @@ impl EngineSchematic {
         }
     }
 
-    fn get_unit(&self, x: usize, y: usize) -> Option<Unit> {
-        self.0.get(y, x).cloned()
+    fn get_unit_with_coords(&self, x: usize, y: usize) -> Option<UnitWithCoords> {
+        self.0
+            .get(y, x)
+            .cloned()
+            .map(|unit| UnitWithCoords { x, y, unit })
     }
 
-    fn get_unit_left(&self, x: usize, y: usize) -> Option<Unit> {
+    fn get_unit_with_coords_left(&self, x: usize, y: usize) -> Option<UnitWithCoords> {
         if x == 0 {
             return None;
         }
 
-        self.0.get(y, x - 1).cloned()
+        let new_x = x - 1;
+
+        self.0
+            .get(y, new_x)
+            .cloned()
+            .map(|unit| UnitWithCoords { x: new_x, y, unit })
     }
 
-    fn get_unit_up(&self, x: usize, y: usize) -> Option<Unit> {
+    fn get_unit_with_coords_up(&self, x: usize, y: usize) -> Option<UnitWithCoords> {
         if y == 0 {
             return None;
         }
 
-        self.0.get(y - 1, x).cloned()
+        let new_y = y - 1;
+
+        self.0
+            .get(new_y, x)
+            .cloned()
+            .map(|unit| UnitWithCoords { x, y: new_y, unit })
     }
 
-    fn get_unit_right(&self, x: usize, y: usize) -> Option<Unit> {
+    fn get_unit_with_coords_right(&self, x: usize, y: usize) -> Option<UnitWithCoords> {
         let x_max = self.0.cols() - 1;
 
         if x == x_max {
             return None;
         }
 
-        self.0.get(y, x + 1).cloned()
+        let new_x = x + 1;
+
+        self.0
+            .get(y, new_x)
+            .cloned()
+            .map(|unit| UnitWithCoords { x: new_x, y, unit })
     }
 
-    fn get_unit_down(&self, x: usize, y: usize) -> Option<Unit> {
+    fn get_unit_with_coords_down(&self, x: usize, y: usize) -> Option<UnitWithCoords> {
         let y_max = self.0.rows() - 1;
 
         if y == y_max {
             return None;
         }
 
-        self.0.get(y + 1, x).cloned()
+        let new_y = y + 1;
+
+        self.0
+            .get(new_y, x)
+            .cloned()
+            .map(|unit| UnitWithCoords { x, y: new_y, unit })
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct UnitWithCoords {
+    x: usize,
+    y: usize,
+    unit: Unit,
+}
+
+impl UnitWithCoords {
+    fn new(c: char, x: usize, y: usize) -> Self {
+        let unit = Unit::new(c);
+
+        Self { x, y, unit }
     }
 }
 
