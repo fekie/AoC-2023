@@ -11,6 +11,36 @@ struct Ship {
     borders: Vec<UnitWithCoords>,
 }
 
+impl Ship {
+    fn is_valid(&self) -> bool {
+        for unit_with_coords in &self.borders {
+            if let Unit::Symbol(_) = unit_with_coords.unit {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn as_number(&self) -> usize {
+        let digits_as_string =
+            self.body
+                .iter()
+                .map(|unit_with_coords| match unit_with_coords.unit {
+                    Unit::Digit(digit) => digit.to_string(),
+                    _ => panic!("The body should only be comprised of digits."),
+                });
+
+        let mut concatenated_digits_string = String::new();
+
+        for digit_string in digits_as_string {
+            concatenated_digits_string.push_str(&digit_string);
+        }
+
+        concatenated_digits_string.parse().unwrap()
+    }
+}
+
 /// A type wrapper over a [`Grid`]. Our (0,0) on the grid is the top left corner,
 /// with the y value increasing as you go down.
 struct EngineSchematic(Grid<Unit>);
@@ -207,14 +237,6 @@ struct UnitWithCoords {
     unit: Unit,
 }
 
-impl UnitWithCoords {
-    fn new(c: char, x: usize, y: usize) -> Self {
-        let unit = Unit::new(c);
-
-        Self { x, y, unit }
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 enum Unit {
     Blank,
@@ -251,5 +273,12 @@ fn generate_engine_schematic() -> EngineSchematic {
 fn main() {
     let engine_schematic = generate_engine_schematic();
     let ships = engine_schematic.find_ships();
-    dbg!(ships);
+
+    let valid_ship_number_sum: usize = ships
+        .iter()
+        .filter(|ship| ship.is_valid())
+        .map(Ship::as_number)
+        .sum();
+
+    println!("Valid Ship Number Sum: {}", valid_ship_number_sum);
 }
