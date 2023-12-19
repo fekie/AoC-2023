@@ -68,8 +68,6 @@ impl EngineSchematic {
                     _ => continue,
                 }
 
-                // dbg!(unit);
-                //dbg!(x, y);
                 let ship = self.build_out_ship(x, y);
 
                 // We skip the next parts of the body.
