@@ -1,11 +1,43 @@
 use grid::Grid;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 
 const INPUT: &str = include_str!("../input.txt");
+
+fn find_ships_attached_to_gears(ships: Vec<Ship>) -> Vec<[Ship; 2]> {
+    // A hashmap that shows the count of ships beside each gear we find.
+    // If a gear has exactly two ships adjacent to it, we include
+    // that pair of ships in the return value.
+    let mut found_gears: HashMap<UnitWithCoords, Vec<Ship>> = HashMap::new();
+
+    for ship in ships {
+        for unit_with_coords in ship.clone().borders {
+            if let Unit::Symbol(symbol) = unit_with_coords.unit {
+                if symbol == '*' {
+                    match found_gears.get_mut(&unit_with_coords) {
+                        Some(ships_found) => ships_found.push(ship.clone()),
+                        None => {
+                            found_gears.insert(unit_with_coords, vec![ship.clone()]);
+                        }
+                    };
+                }
+            }
+        }
+    }
+
+    found_gears
+        .iter()
+        .filter_map(|(_, found_ships)| match found_ships.len() {
+            2 => Some(found_ships.clone().try_into().unwrap()),
+            _ => None,
+        })
+        .collect()
+}
 
 /// Contains clusters of numbers horizontally adjacent to each other,
 /// along with the bordering units. Naming it Ships cause it reminds
 /// me of Battleship.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct Ship {
     body: Vec<UnitWithCoords>,
     borders: Vec<UnitWithCoords>,
@@ -230,14 +262,14 @@ impl EngineSchematic {
 
 /// This is sort of a wrapper over [`Unit`] that allows us to store the position of
 /// the unit as well.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct UnitWithCoords {
     x: usize,
     y: usize,
     unit: Unit,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum Unit {
     Blank,
     Symbol(char),
@@ -271,6 +303,7 @@ fn generate_engine_schematic() -> EngineSchematic {
 }
 
 fn main() {
+    // Part 1
     let engine_schematic = generate_engine_schematic();
     let ships = engine_schematic.find_ships();
 
@@ -281,4 +314,14 @@ fn main() {
         .sum();
 
     println!("Valid Ship Number Sum: {}", valid_ship_number_sum);
+
+    // Part 2
+    let ships_attached_to_gears = find_ships_attached_to_gears(ships);
+
+    let sum_of_gear_ratios: usize = ships_attached_to_gears
+        .iter()
+        .map(|ship_pair| ship_pair[0].as_number() * ship_pair[1].as_number())
+        .sum();
+
+    println!("Sum of Gear Ratios: {}", sum_of_gear_ratios);
 }
