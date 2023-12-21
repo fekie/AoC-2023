@@ -1,5 +1,4 @@
 use grid::Grid;
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
 const INPUT: &str = include_str!("../input.txt");
