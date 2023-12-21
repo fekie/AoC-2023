@@ -1,6 +1,74 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 const INPUT: &str = include_str!("../input.txt");
+
+struct GameTracker {
+    tracked_games: HashMap<u32, u32>,
+    current_game: u32,
+    games: Vec<Game>,
+}
+
+impl GameTracker {
+    fn new(games: Vec<Game>) -> Self {
+        // We go ahead populate the tracked games. We start
+        // with one copy of each card.
+        let mut tracked_games = HashMap::new();
+        let starting_game = 1;
+
+        for id in starting_game as usize..=games.len() {
+            tracked_games.insert(id as u32, 1);
+        }
+
+        Self {
+            tracked_games,
+            current_game: starting_game,
+            games,
+        }
+    }
+
+    /// Steps through the next game. Returns true if another step can
+    /// be made, and returns false if the [`GameTracker`] has terminated.
+    fn step(&mut self) -> bool {
+        let game = &self.games[self.current_game as usize - 1];
+
+        // We increment the next instances of the upcoming card ids by the amount
+        // of cards of the game we just scratched off.
+        //
+        // We can unwrap these because we already populated the HashMap
+        // on initialization of [`GameTracker`].
+        let increment_amount = *self.tracked_games.get(&self.current_game).unwrap();
+
+        let matches = game.calculate_matches();
+
+        dbg!(matches);
+
+        // We get the ids of the cards that we need to scratch off after this
+        let upcoming_card_ids = (1..=matches).map(|game_index| game_index + self.current_game);
+
+        dbg!(self.current_game);
+        dbg!(increment_amount);
+        dbg!(matches);
+        dbg!(&upcoming_card_ids.clone().collect::<Vec<u32>>());
+
+        for upcoming_card_id in upcoming_card_ids {
+            let card_count = self.tracked_games.get_mut(&upcoming_card_id).unwrap();
+            *card_count += increment_amount
+        }
+
+        dbg!(&self.tracked_games);
+
+        self.current_game += 1;
+
+        /* // We go ahead and make sure that the next game can be played.
+         *self.tracked_games.get(&(self.current_game)).unwrap_or(&0) != 0 */
+
+        self.current_game != self.games.len() as u32
+    }
+
+    fn scratchcards_used(&self) -> u32 {
+        self.tracked_games.values().sum()
+    }
+}
 
 #[derive(Debug)]
 struct Game {
@@ -43,7 +111,7 @@ impl Game {
         }
     }
 
-    fn calculate_value(&self) -> u32 {
+    fn calculate_matches(&self) -> u32 {
         let winning_numbers_hashset = {
             let mut winning_numbers_hashset = HashSet::new();
 
@@ -54,23 +122,35 @@ impl Game {
             winning_numbers_hashset
         };
 
-        let matches = self
-            .available_numbers
+        self.available_numbers
             .iter()
             .filter_map(|number| winning_numbers_hashset.get(number))
-            .count() as u32;
-
-        match matches {
-            0 => 0,
-            _ => 2_u32.pow(matches - 1),
-        }
+            .count() as u32
     }
 }
 
 fn main() {
+    // Part 1
     let games = INPUT.lines().map(Game::new).collect::<Vec<Game>>();
 
-    let sum_of_game_values: u32 = games.iter().map(Game::calculate_value).sum();
+    let sum_of_game_values: u32 = games
+        .iter()
+        .map(Game::calculate_matches)
+        .map(|matches| match matches {
+            0 => 0,
+            _ => 2_u32.pow(matches - 1),
+        })
+        .sum();
 
-    println!("Sum of Game Values: {sum_of_game_values}")
+    println!("Sum of Game Values: {sum_of_game_values}");
+
+    // Part 2
+    let mut game_tracker = GameTracker::new(games);
+
+    // Loop through all the steps.
+    while game_tracker.step() {}
+
+    let scratchcards_used = game_tracker.scratchcards_used();
+
+    println!("Scratchcards Used: {scratchcards_used}")
 }
