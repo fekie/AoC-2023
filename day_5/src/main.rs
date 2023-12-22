@@ -1,3 +1,5 @@
+use rayon::prelude::*;
+
 const INPUT: &str = include_str!("../input.txt");
 
 #[derive(Debug)]
@@ -38,8 +40,6 @@ impl MapLine {
 
 #[derive(Debug)]
 struct Map {
-    from: String,
-    to: String,
     map_lines: Vec<MapLine>,
 }
 
@@ -56,24 +56,11 @@ impl Map {
 
 impl Map {
     fn new(input_line_blocks: Vec<&str>) -> Self {
-        let mut input_line_blocks = input_line_blocks.into_iter();
+        let input_line_blocks = input_line_blocks.into_iter();
 
-        let (from, to) = {
-            let first_line = input_line_blocks.next().unwrap();
-            let split = first_line.split('-').collect::<Vec<&str>>();
-            (
-                split[0].to_string(),
-                split[2].split_whitespace().collect::<Vec<&str>>()[0].to_string(),
-            )
-        };
+        let map_lines = input_line_blocks.skip(1).map(MapLine::new).collect();
 
-        let map_lines = input_line_blocks.map(MapLine::new).collect();
-
-        Self {
-            from,
-            to,
-            map_lines,
-        }
+        Self { map_lines }
     }
 }
 
@@ -102,28 +89,29 @@ fn main() {
     // Part 2
     let mut input_line_blocks = parse_input_line_blocks().into_iter();
 
-    let mut seed_pairs = parse_seeds(input_line_blocks.next().unwrap().first().unwrap())
-        .chunks(2)
-        .map(|chunk| (chunk[0]..chunk[0] + chunk[1]).collect::<Vec<i64>>())
-        .collect::<Vec<_>>();
+    let mut all_seeds_from_pairs = {
+        let mut all_seeds_from_pairs = Vec::new();
+
+        parse_seeds(input_line_blocks.next().unwrap().first().unwrap())
+            .chunks(2)
+            .for_each(|chunk| all_seeds_from_pairs.extend(chunk[0]..chunk[0] + chunk[1]));
+
+        all_seeds_from_pairs
+    };
 
     let maps = input_line_blocks.map(Map::new).collect::<Vec<Map>>();
 
-    let outputs = seed_pairs.iter_mut().flat_map(|inputs| {
-        dbg!(inputs.len());
+    let outputs = all_seeds_from_pairs.par_iter_mut().map(|input| {
+        maps.iter().for_each(|map| {
+            *input = map.convert(*input);
+        });
 
-        inputs.iter_mut().map(|input| {
-            maps.iter().for_each(|map| {
-                *input = map.convert(*input);
-            });
-
-            *input
-        })
+        *input
     });
 
     let lowest = outputs.min().unwrap();
 
-    println!("Lowest Soil Value using Pairs: {lowest}");
+    println!("Lowest Soil Value Using Pairs: {lowest}");
 }
 
 fn parse_input_line_blocks() -> Vec<Vec<&'static str>> {
