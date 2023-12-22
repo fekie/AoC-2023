@@ -78,6 +78,7 @@ impl Map {
 }
 
 fn main() {
+    // Part 1
     // We create an iterator that contains vectors of lines in the input file.
     // This splits the file by the blank lines.
     let mut input_line_blocks = parse_input_line_blocks().into_iter();
@@ -97,6 +98,32 @@ fn main() {
     let lowest = outputs.min().unwrap();
 
     println!("Lowest Soil Value: {lowest}");
+
+    // Part 2
+    let mut input_line_blocks = parse_input_line_blocks().into_iter();
+
+    let mut seed_pairs = parse_seeds(input_line_blocks.next().unwrap().first().unwrap())
+        .chunks(2)
+        .map(|chunk| (chunk[0]..chunk[0] + chunk[1]).collect::<Vec<i64>>())
+        .collect::<Vec<_>>();
+
+    let maps = input_line_blocks.map(Map::new).collect::<Vec<Map>>();
+
+    let outputs = seed_pairs.iter_mut().flat_map(|inputs| {
+        dbg!(inputs.len());
+
+        inputs.iter_mut().map(|input| {
+            maps.iter().for_each(|map| {
+                *input = map.convert(*input);
+            });
+
+            *input
+        })
+    });
+
+    let lowest = outputs.min().unwrap();
+
+    println!("Lowest Soil Value using Pairs: {lowest}");
 }
 
 fn parse_input_line_blocks() -> Vec<Vec<&'static str>> {
