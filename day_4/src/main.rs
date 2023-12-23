@@ -40,27 +40,15 @@ impl GameTracker {
 
         let matches = game.calculate_matches();
 
-        dbg!(matches);
-
         // We get the ids of the cards that we need to scratch off after this
         let upcoming_card_ids = (1..=matches).map(|game_index| game_index + self.current_game);
-
-        dbg!(self.current_game);
-        dbg!(increment_amount);
-        dbg!(matches);
-        dbg!(&upcoming_card_ids.clone().collect::<Vec<u32>>());
 
         for upcoming_card_id in upcoming_card_ids {
             let card_count = self.tracked_games.get_mut(&upcoming_card_id).unwrap();
             *card_count += increment_amount
         }
 
-        dbg!(&self.tracked_games);
-
         self.current_game += 1;
-
-        /* // We go ahead and make sure that the next game can be played.
-         *self.tracked_games.get(&(self.current_game)).unwrap_or(&0) != 0 */
 
         self.current_game != self.games.len() as u32
     }
