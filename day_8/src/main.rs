@@ -3,6 +3,7 @@ use std::str::FromStr;
 use std::{cell::RefCell, rc::Rc};
 
 const INPUT: &str = include_str!("../input.txt");
+const START_NODE_NAME: &str = "AAA";
 const TERMINATION_NODE_NAME: &str = "ZZZ";
 
 #[derive(Debug)]
@@ -81,10 +82,15 @@ impl Node {
             node.borrow_mut().right = Some(right_node);
         }
 
-        // We only need to return the first node. The rest are still in memory
+        // We only need to return the first node (the AAA node). The rest are still in memory
         // because they are wrapped in `Rc`.
 
-        Rc::clone(&nodes[0])
+        Rc::clone(
+            nodes
+                .iter()
+                .find(|node| node.borrow().name == START_NODE_NAME)
+                .unwrap(),
+        )
     }
 
     /// Traverses from the starting node until `TERMINATION_NODE_NAME` is reached.
