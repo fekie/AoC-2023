@@ -3,6 +3,7 @@ use std::str::FromStr;
 use std::{cell::RefCell, rc::Rc};
 
 const INPUT: &str = include_str!("../input.txt");
+const TERMINATION_NODE_NAME: &str = "ZZZ";
 
 #[derive(Debug)]
 enum Direction {
@@ -85,6 +86,31 @@ impl Node {
 
         Rc::clone(&nodes[0])
     }
+
+    /// Traverses from the starting node until `TERMINATION_NODE_NAME` is reached.
+    /// After this, the program returns the amount of steps it took.
+    fn steps_until_termination(starting_node: Rc<RefCell<Self>>, directions: &[Direction]) -> u64 {
+        let mut current_node = Rc::clone(&starting_node);
+        let mut steps = 0;
+
+        loop {
+            for direction in directions {
+                let next_node = match direction {
+                    Direction::Left => Rc::clone(current_node.borrow().left.as_ref().unwrap()),
+                    Direction::Right => Rc::clone(current_node.borrow().right.as_ref().unwrap()),
+                };
+
+                current_node = next_node;
+
+                // Go ahead and increment steps before checking for termination.
+                steps += 1;
+
+                if current_node.borrow().name == TERMINATION_NODE_NAME {
+                    return steps;
+                }
+            }
+        }
+    }
 }
 
 fn main() {
@@ -99,5 +125,7 @@ fn main() {
 
     let starting_node = Node::starting_node_from_lines(&lines[2..]);
 
-    // dbg!(starting_node);
+    let steps_until_termination = Node::steps_until_termination(starting_node, &directions);
+
+    println!("Steps Until Termination: {steps_until_termination}");
 }
