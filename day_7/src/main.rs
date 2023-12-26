@@ -1,13 +1,48 @@
+#![feature(is_sorted)]
+
 use itertools::Itertools;
+use std::cmp::Ordering;
 use std::collections::HashMap;
+use strum_macros::EnumIter;
 
 const INPUT: &str = include_str!("../input.txt");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 struct Hand {
     cards: [Card; 5],
     bid: u64,
-    hand_rank: HandRank,
+    hand_type: HandType,
+}
+
+impl Ord for Hand {
+    fn cmp(&self, other: &Self) -> Ordering {
+        //self.height.cmp(&other.height)
+        match self.hand_type.cmp(&other.hand_type) {
+            Ordering::Greater => Ordering::Greater,
+            Ordering::Less => Ordering::Less,
+            Ordering::Equal => {
+                // We compare the cards in order and choose whether
+                // it's greater or less than when the cards are different.
+                for (original_card, other_card) in self.cards.iter().zip(&other.cards) {
+                    match original_card.cmp(other_card) {
+                        Ordering::Greater => return Ordering::Greater,
+                        Ordering::Less => return Ordering::Less,
+                        Ordering::Equal => {}
+                    }
+                }
+
+                // If that all fails (which it shouldn't with this input),
+                // we just return [`Ordering::Equal`]
+                Ordering::Equal
+            }
+        }
+    }
+}
+
+impl PartialOrd for Hand {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl Hand {
@@ -26,28 +61,28 @@ impl Hand {
 
         let bid = split[1].parse().unwrap();
 
-        let hand_rank = HandRank::calculate(&cards);
+        let hand_type = HandType::calculate(&cards);
 
         Self {
             cards,
             bid,
-            hand_rank,
+            hand_type,
         }
     }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-enum HandRank {
-    FiveOfAKind,
-    FourOfAKind,
-    FullHouse,
-    ThreeOfAKind,
-    TwoPair,
-    OnePair,
+#[derive(Debug, EnumIter, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
+enum HandType {
     HighCard,
+    OnePair,
+    TwoPair,
+    ThreeOfAKind,
+    FullHouse,
+    FourOfAKind,
+    FiveOfAKind,
 }
 
-impl HandRank {
+impl HandType {
     fn calculate(cards: &[Card; 5]) -> Self {
         // A hashmap that stores the amount of times we have seen a card in this set.
         let mut cards_found: HashMap<Card, u64> = HashMap::new();
@@ -88,19 +123,19 @@ impl HandRank {
 // Deriving Ord means that the order is defined by how high the variant is listed.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 enum Card {
-    A,
-    K,
-    Q,
-    J,
-    T,
-    Nine,
-    Eight,
-    Seven,
-    Six,
-    Five,
-    Four,
-    Three,
     Two,
+    Three,
+    Four,
+    Five,
+    Six,
+    Seven,
+    Eight,
+    Nine,
+    Ten,
+    J,
+    Q,
+    K,
+    A,
 }
 
 impl Card {
@@ -110,7 +145,7 @@ impl Card {
             'K' => Ok(Card::K),
             'Q' => Ok(Card::Q),
             'J' => Ok(Card::J),
-            'T' => Ok(Card::T),
+            'T' => Ok(Card::Ten),
             '9' => Ok(Card::Nine),
             '8' => Ok(Card::Eight),
             '7' => Ok(Card::Seven),
@@ -125,7 +160,14 @@ impl Card {
 }
 
 fn main() {
-    let hands = INPUT.lines().map(Hand::new).collect::<Vec<Hand>>();
+    // We parse and sort the hands by strength.
+    let hands = INPUT.lines().map(Hand::new).sorted().collect::<Vec<Hand>>();
 
-    dbg!(hands);
+    let sum_of_hand_scores = hands
+        .iter()
+        .enumerate()
+        .map(|(i, hand)| hand.bid * (i + 1) as u64)
+        .sum::<u64>();
+
+    println!("Sum of Hand Scores: {sum_of_hand_scores}");
 }
